@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        # Auth routes → user-service (public)
+        - id: auth-service
+          uri: http://${USER_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/auth/**
+
+        # User routes → user-service (protected)
+        - id: user-service
+          uri: http://${USER_SERVICE_HOST:localhost}:8081
+          predicates:
+            - Path=/api/users/**
+
+        # Task routes → task-service (protected)
+        - id: task-service
+          uri: http://${TASK_SERVICE_HOST:localhost}:8082
+          predicates:
+            - Path=/api/tasks/**
+
+      # Default filters applied to all routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    com.taskflow: DEBUG
+    org.springframework.cloud.gateway: INFO
