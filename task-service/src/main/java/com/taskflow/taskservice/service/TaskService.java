@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -58,9 +58,12 @@ public class TaskService {
      * Get a task by ID.
      */
     @Transactional(readOnly = true)
-    public TaskResponse getTaskById(UUID taskId) {
+    public TaskResponse getTaskById(UUID taskId, UUID userId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
+        if (!task.getAssigneeId().equals(userId)) {
+            throw new ResourceNotFoundException("Task not found: " + taskId);
+        }
         return toResponse(task);
     }
 
@@ -78,7 +81,7 @@ public class TaskService {
             tasks = taskRepository.findByAssigneeId(assigneeId);
         }
 
-        return tasks.stream().map(this::toResponse).collect(Collectors.toList());
+        return tasks.stream().map(this::toResponse).toList();
     }
 
     /**
@@ -124,12 +127,14 @@ public class TaskService {
      * Delete a task by ID.
      */
     @Transactional
-    public void deleteTask(UUID taskId) {
-        if (!taskRepository.existsById(taskId)) {
+    public void deleteTask(UUID taskId, UUID userId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
+        if (!task.getAssigneeId().equals(userId)) {
             throw new ResourceNotFoundException("Task not found: " + taskId);
         }
-        taskRepository.deleteById(taskId);
-        log.info("Task deleted: {}", taskId);
+        taskRepository.delete(task);
+        log.info("Task deleted: {} by user {}", taskId, userId);
     }
 
     /**

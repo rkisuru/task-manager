@@ -37,8 +37,10 @@ public class TaskController {
      * GET /api/tasks/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TaskResponse> getTask(@PathVariable UUID id) {
-        TaskResponse response = taskService.getTaskById(id);
+    public ResponseEntity<TaskResponse> getTask(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userId) {
+        TaskResponse response = taskService.getTaskById(id, UUID.fromString(userId));
         return ResponseEntity.ok(response);
     }
 
@@ -72,8 +74,10 @@ public class TaskController {
      * DELETE /api/tasks/{id}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable UUID id) {
-        taskService.deleteTask(id);
+    public ResponseEntity<Void> deleteTask(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userId) {
+        taskService.deleteTask(id, UUID.fromString(userId));
         return ResponseEntity.noContent().build();
     }
 }
