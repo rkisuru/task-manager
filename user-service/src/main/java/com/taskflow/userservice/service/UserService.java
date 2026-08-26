@@ -76,6 +76,7 @@ public class UserService {
      *
      * @throws BadCredentialsException if username or password is incorrect
      */
+    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         // Find user by username
         User user = userRepository.findByUsername(request.getUsername())
