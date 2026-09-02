@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskflow-config
+  namespace: taskflow
+  labels:
+    app.kubernetes.io/part-of: taskflow
+data:
+  # ---- Postgres (user-service) ----
+  USER_DB_HOST: "postgres-user.taskflow.svc.cluster.local"
+  USER_DB_PORT: "5432"
+  USER_DB_NAME: "taskflow_users"
+
+  # ---- Postgres (task-service) ----
+  TASK_DB_HOST: "postgres-task.taskflow.svc.cluster.local"
+  TASK_DB_PORT: "5432"
+  TASK_DB_NAME: "taskflow_tasks"
+
+  # ---- RabbitMQ ----
+  RABBITMQ_HOST: "rabbitmq.taskflow.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+
+  # ---- Inter-service routing (used by api-gateway) ----
+  USER_SERVICE_HOST: "user-service.taskflow.svc.cluster.local"
+  TASK_SERVICE_HOST: "task-service.taskflow.svc.cluster.local"
+  USER_SERVICE_PORT: "8081"
+  TASK_SERVICE_PORT: "8082"
+
+  # ---- CORS ----
+  ALLOWED_ORIGINS: "http://localhost,http://localhost:80,http://localhost:3000"
+
+  # ---- JWT (non-secret config) ----
+  JWT_EXPIRATION: "86400000"
