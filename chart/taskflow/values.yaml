@@ -1,0 +1,105 @@
+namespace: taskflow
+
+# ---- Image configuration ----
+images:
+  userService: taskflow/user-service:local
+  taskService: taskflow/task-service:local
+  notificationService: taskflow/notification-service:local
+  apiGateway: taskflow/api-gateway:local
+  frontend: taskflow/frontend:local
+  postgres: postgres:16-alpine
+  rabbitmq: rabbitmq:3-management-alpine
+
+imagePullPolicy: Never
+
+# ---- Service ports ----
+services:
+  userService:
+    port: 8081
+  taskService:
+    port: 8082
+  notificationService:
+    port: 8083
+  apiGateway:
+    port: 8080
+  frontend:
+    port: 80
+
+# ---- Replica counts ----
+replicas:
+  userService: 2
+  taskService: 2
+  apiGateway: 2
+  notificationService: 1
+  frontend: 1
+
+# ---- Resource limits ----
+resources:
+  javaService:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  frontend:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "200m"
+      memory: "128Mi"
+  postgres:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    storageSize: "1Gi"
+  rabbitmq:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  notificationService:
+    requests:
+      cpu: "50m"
+      memory: "192Mi"
+    limits:
+      cpu: "250m"
+      memory: "384Mi"
+
+# ---- Database ----
+database:
+  userDb:
+    name: taskflow_users
+  taskDb:
+    name: taskflow_tasks
+
+# ---- Credentials (overridable for production) ----
+secrets:
+  jwtSecret: "86de2f9ce8fc12d721b4b97f894aa011e770f5c703b40cfd992995ed60720a37"
+  dbUsername: "postgres"
+  dbPassword: "postgres"
+  rabbitmqUsername: "guest"
+  rabbitmqPassword: "guest"
+
+# ---- JWT ----
+jwt:
+  expirationMs: "86400000"
+
+# ---- CORS ----
+cors:
+  allowedOrigins: "http://localhost,http://localhost:80,http://localhost:3000"
+
+# ---- Ingress ----
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"

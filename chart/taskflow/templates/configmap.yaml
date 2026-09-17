@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskflow-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "taskflow.labels" . | nindent 4 }}
+data:
+  # ---- Postgres (user-service) ----
+  USER_DB_HOST: "postgres-user.{{ .Values.namespace }}.svc.cluster.local"
+  USER_DB_PORT: "5432"
+  USER_DB_NAME: {{ .Values.database.userDb.name | quote }}
+  # ---- Postgres (task-service) ----
+  TASK_DB_HOST: "postgres-task.{{ .Values.namespace }}.svc.cluster.local"
+  TASK_DB_PORT: "5432"
+  TASK_DB_NAME: {{ .Values.database.taskDb.name | quote }}
+  # ---- RabbitMQ ----
+  RABBITMQ_HOST: "rabbitmq.{{ .Values.namespace }}.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+  # ---- Inter-service routing (used by api-gateway) ----
+  USER_SERVICE_HOST: "user-service.{{ .Values.namespace }}.svc.cluster.local"
+  USER_SERVICE_PORT: {{ .Values.services.userService.port | quote }}
+  TASK_SERVICE_HOST: "task-service.{{ .Values.namespace }}.svc.cluster.local"
+  TASK_SERVICE_PORT: {{ .Values.services.taskService.port | quote }}
+  # ---- CORS ----
+  ALLOWED_ORIGINS: {{ .Values.cors.allowedOrigins | quote }}
+  # ---- JWT (non-secret config) ----
+  JWT_EXPIRATION: {{ .Values.jwt.expirationMs | quote }}
+

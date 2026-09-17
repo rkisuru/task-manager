@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: task-service
+    {{- include "taskflow.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas.taskService }}
+  selector:
+    matchLabels:
+      {{- include "taskflow.selectorLabels" (dict "app" "task-service") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "taskflow.selectorLabels" (dict "app" "task-service") | nindent 8 }}
+    spec:
+      containers:
+        - name: task-service
+          image: {{ .Values.images.taskService }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.taskService.port }}
+          env:
+            # Database
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: taskflow-config
+                  key: TASK_DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: taskflow-config
+                  key: TASK_DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: taskflow-config
+                  key: TASK_DB_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secrets
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secrets
+                  key: DB_PASSWORD
+            # RabbitMQ
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: taskflow-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: taskflow-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secrets
+                  key: RABBITMQ_USERNAME
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secrets
+                  key: RABBITMQ_PASSWORD
+            # JWT
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secrets
+                  key: JWT_SECRET
+          resources:
+            {{- toYaml .Values.resources.javaService | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.services.taskService.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: {{ .Values.services.taskService.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: task-service
+    {{- include "taskflow.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "taskflow.selectorLabels" (dict "app" "task-service") | nindent 4 }}
+  ports:
+    - port: {{ .Values.services.taskService.port }}
+      targetPort: {{ .Values.services.taskService.port }}
+  type: ClusterIP

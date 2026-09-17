@@ -1,0 +1,13 @@
+apiVersion: v2
+name: taskflow
+description: TaskFlow — A cloud-native task management platform deployed as microservices on Kubernetes
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - taskflow
+  - microservices
+  - spring-boot
+  - react
+maintainers:
+  - name: Isuru
