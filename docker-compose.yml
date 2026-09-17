@@ -1,0 +1,205 @@
+services:
+  # ========================
+  # Infrastructure
+  # ========================
+
+  postgres-user:
+    image: postgres:16-alpine
+    container_name: taskflow-postgres-user
+    environment:
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${USER_DB_HOST_PORT}:5432"
+    volumes:
+      - postgres-user-data:/var/lib/postgresql/data
+    networks:
+      - taskflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-task:
+    image: postgres:16-alpine
+    container_name: taskflow-postgres-task
+    environment:
+      POSTGRES_DB: ${TASK_DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${TASK_DB_HOST_PORT}:5432"
+    volumes:
+      - postgres-task-data:/var/lib/postgresql/data
+    networks:
+      - taskflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: taskflow-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_HOST_PORT}:5672"
+      - "${RABBITMQ_MGMT_PORT}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - taskflow-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ========================
+  # Backend Services
+  # ========================
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: taskflow-user-service
+    environment:
+      SERVER_PORT: ${USER_SERVICE_PORT}
+      DB_HOST: postgres-user
+      DB_PORT: 5432
+      DB_NAME: ${USER_DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL}
+      ACTUATOR_ENDPOINTS: ${ACTUATOR_ENDPOINTS}
+      ACTUATOR_HEALTH_DETAILS: ${ACTUATOR_HEALTH_DETAILS}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP}
+      LOG_LEVEL_SECURITY: ${LOG_LEVEL_SECURITY}
+    ports:
+      - "${USER_SERVICE_PORT}:${USER_SERVICE_PORT}"
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+    networks:
+      - taskflow-network
+    restart: on-failure
+
+  task-service:
+    build:
+      context: ./task-service
+      dockerfile: Dockerfile
+    container_name: taskflow-task-service
+    environment:
+      SERVER_PORT: ${TASK_SERVICE_PORT}
+      DB_HOST: postgres-task
+      DB_PORT: 5432
+      DB_NAME: ${TASK_DB_NAME}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO}
+      JPA_SHOW_SQL: ${JPA_SHOW_SQL}
+      ACTUATOR_ENDPOINTS: ${ACTUATOR_ENDPOINTS}
+      ACTUATOR_HEALTH_DETAILS: ${ACTUATOR_HEALTH_DETAILS}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP}
+    ports:
+      - "${TASK_SERVICE_PORT}:${TASK_SERVICE_PORT}"
+    depends_on:
+      postgres-task:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - taskflow-network
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: taskflow-notification-service
+    environment:
+      SERVER_PORT: ${NOTIFICATION_SERVICE_PORT}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      ACTUATOR_ENDPOINTS: ${ACTUATOR_ENDPOINTS}
+      ACTUATOR_HEALTH_DETAILS: ${ACTUATOR_HEALTH_DETAILS}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:${NOTIFICATION_SERVICE_PORT}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - taskflow-network
+    restart: on-failure
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: taskflow-api-gateway
+    environment:
+      SERVER_PORT: ${GATEWAY_PORT}
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: ${USER_SERVICE_PORT}
+      TASK_SERVICE_HOST: task-service
+      TASK_SERVICE_PORT: ${TASK_SERVICE_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      ACTUATOR_ENDPOINTS: ${ACTUATOR_ENDPOINTS}
+      ACTUATOR_HEALTH_DETAILS: ${ACTUATOR_HEALTH_DETAILS}
+      LOG_LEVEL_APP: ${LOG_LEVEL_APP}
+      LOG_LEVEL_GATEWAY: ${LOG_LEVEL_GATEWAY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    depends_on:
+      - user-service
+      - task-service
+    networks:
+      - taskflow-network
+    restart: on-failure
+
+  # ========================
+  # Frontend
+  # ========================
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: taskflow-frontend
+    ports:
+      - "${FRONTEND_PORT}:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - taskflow-network
+
+# ========================
+# Volumes & Networks
+# ========================
+
+volumes:
+  postgres-user-data:
+  postgres-task-data:
+  rabbitmq-data:
+
+networks:
+  taskflow-network:
+    driver: bridge
