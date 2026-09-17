@@ -1,0 +1,43 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+.settings/
+
+# Eclipse
+.classpath
+.project
+.factorypath
+
+# Node
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+#k8s
+secret.yaml
